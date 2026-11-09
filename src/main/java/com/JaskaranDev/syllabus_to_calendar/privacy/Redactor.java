@@ -1,11 +1,19 @@
 package com.JaskaranDev.syllabus_to_calendar.privacy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Redactor {
 
-    public record Result(String text, int emailsRedacted, int phonesRedacted, int linesDropped) {}
+    public record ContactInfo(List<String> contactLines, List<String> emails, List<String> phones) {}
+
+    public record Result(String text, ContactInfo contact) {
+        public int emailsRedacted() { return contact.emails().size(); }
+        public int phonesRedacted() { return contact.phones().size(); }
+        public int linesDropped() { return contact.contactLines().size(); }
+    }
 
     private static final Pattern EMAIL =
             Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}");
@@ -20,29 +28,30 @@ public class Redactor {
 
     public Result redact(String text) {
         StringBuilder out = new StringBuilder();
-        int emails = 0;
-        int phones = 0;
-        int dropped = 0;
+        List<String> contactLines = new ArrayList<>();
+        List<String> emails = new ArrayList<>();
+        List<String> phones = new ArrayList<>();
 
         for (String line : text.split("\\R", -1)) {
             if (OFFICE_HOURS.matcher(line).find() || CONTACT_LABEL.matcher(line).matches()) {
-                dropped++;
+                contactLines.add(line.strip());
                 continue;
             }
-            emails += count(EMAIL.matcher(line));
-            line = EMAIL.matcher(line).replaceAll("[EMAIL]");
-            phones += count(PHONE.matcher(line));
-            line = PHONE.matcher(line).replaceAll("[PHONE]");
+            line = replaceAndCollect(EMAIL, line, "[EMAIL]", emails);
+            line = replaceAndCollect(PHONE, line, "[PHONE]", phones);
             out.append(line).append('\n');
         }
-        return new Result(out.toString(), emails, phones, dropped);
+        ContactInfo contact = new ContactInfo(
+                List.copyOf(contactLines), List.copyOf(emails), List.copyOf(phones));
+        return new Result(out.toString(), contact);
     }
 
-    private static int count(Matcher matcher) {
-        int n = 0;
+    private static String replaceAndCollect(Pattern pattern, String line,
+                                            String placeholder, List<String> found) {
+        Matcher matcher = pattern.matcher(line);
         while (matcher.find()) {
-            n++;
+            found.add(matcher.group().strip());
         }
-        return n;
+        return pattern.matcher(line).replaceAll(placeholder);
     }
 }

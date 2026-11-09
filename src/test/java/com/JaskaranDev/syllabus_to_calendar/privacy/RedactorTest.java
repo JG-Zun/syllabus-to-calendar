@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 
 class RedactorTest {
 
@@ -61,5 +62,22 @@ class RedactorTest {
     void doesNotMistakeDatesForPhoneNumbers() {
         Redactor.Result r = redactor.redact("Due 2026-11-20 and 11.20.2026 and 20261120");
         assertEquals(0, r.phonesRedacted());
+    }
+
+    @Test
+    void keepsRemovedInfoForTheUser() {
+        Redactor.Result r = redactor.redact(
+                "Instructor: Dr. Jane Smith\nOffice Hours: Tuesdays 2-4pm\n"
+                        + "Email me at jane@uni.ca or 613-555-0123 about the quiz.\nQuiz 1: Oct 3");
+
+        assertFalse(r.text().contains("Jane"));
+        assertFalse(r.text().contains("jane@uni.ca"));
+        assertFalse(r.text().contains("613-555-0123"));
+        assertTrue(r.text().contains("Quiz 1: Oct 3"));
+
+        assertEquals(List.of("Instructor: Dr. Jane Smith", "Office Hours: Tuesdays 2-4pm"),
+                r.contact().contactLines());
+        assertEquals(List.of("jane@uni.ca"), r.contact().emails());
+        assertEquals(List.of("613-555-0123"), r.contact().phones());
     }
 }

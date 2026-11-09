@@ -30,6 +30,7 @@ public class ExtractPreview {
                 System.out.println("==== " + pdf.getFileName() + " ====");
                 try {
                     SyllabusProcessor.Result result = processor.process(pdf, termStart);
+                    System.out.println("Course" + result.course());
                     for (CalendarEvent event : result.events()) {
                         System.out.println(event.date() + "  " + event.type() + "  " + event.title());
                     }

@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RuleBasedExtractorTest {
 
     private static final LocalDate TERM_START = LocalDate.of(2026, 9, 8);
+    private static final LocalDate SUMMER_START = LocalDate.of(2026, 5, 4);
     private final RuleBasedExtractor extractor = new RuleBasedExtractor();
 
     private List<CalendarEvent> run(String text) {
@@ -103,5 +104,39 @@ class RuleBasedExtractorTest {
         assertEquals(EventType.PROJECT, run("Final project due Dec 4").get(0).type());
         assertEquals(EventType.QUIZ, run("Due: Quiz 3 on Nov 12").get(0).type());
         assertEquals(EventType.OTHER, run("Submit reflection by Nov 20").get(0).type());
+    }
+
+    @Test
+    void mergesRepeatedMentionsOfTheSameEvent() {
+        String text = "Midterms (July 23): midterms shall consist of either short-answer or essay questions done in class\n"
+                + "Midterm 3 - July 23";
+        assertEquals(List.of(new CalendarEvent("Midterm 3", LocalDate.of(2026, 7, 23), EventType.EXAM)),
+                extractor.extract(text, SUMMER_START));
+    }
+
+    @Test
+    void dropsLongDescriptionsAfterAColon() {
+        String text = "Essay (July 30): a completed essay following the instructions (to be distributed on June 10)\n"
+                + "Essay - July 30";
+        assertEquals(List.of(new CalendarEvent("Essay", LocalDate.of(2026, 7, 30), EventType.PROJECT)),
+                extractor.extract(text, SUMMER_START));
+    }
+
+    @Test
+    void splitsSentencesAndDoesNotTreatEssayQuestionsAsAProject() {
+        String text = "Final Examination (August 6). It shall consist of five essay questions, "
+                + "out of which students shall answer two.";
+        assertEquals(List.of(new CalendarEvent("Final Examination", LocalDate.of(2026, 8, 6), EventType.EXAM)),
+                extractor.extract(text, SUMMER_START));
+    }
+
+    @Test
+    void keepsDifferentNumbersSeparate() {
+        assertEquals(2, run("Quiz 1 - Oct 3\nQuiz 2 - Oct 3").size());
+    }
+
+    @Test
+    void keepsDifferentItemsOnTheSameDaySeparate() {
+        assertEquals(2, run("Assignment 3 due Oct 10\nLab 4 due Oct 10").size());
     }
 }

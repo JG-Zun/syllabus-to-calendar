@@ -36,7 +36,7 @@ public class RuleBasedExtractor implements Extractor {
             new KeywordRule(EventType.QUIZ,
                     Pattern.compile("(?i)\\bquiz(?:zes|es)?\\b")),
             new KeywordRule(EventType.PROJECT,
-                    Pattern.compile("(?i)\\b(?:projects?|presentations?|proposals?|essays?|papers?|reports?|thesis)\\b")),
+                    Pattern.compile("(?i)\\b(?:projects?|presentations?|proposals?|essays?(?!\\s+questions?)|papers?|reports?|thesis)\\b")),
             new KeywordRule(EventType.ASSIGNMENT,
                     Pattern.compile("(?i)\\b(?:assignments?|homework|hw\\d*|problem\\s+sets?|psets?|labs?|worksheets?|deliverables?)\\b")));
 
@@ -46,6 +46,9 @@ public class RuleBasedExtractor implements Extractor {
                     + "|\\b(?:mid-?term|exam|final|quiz|test)\\s+review\\b|\\breview\\s+(?:session|for)\\b");
     private static final Pattern RELEASE = Pattern.compile(
             "(?i)\\b(?:released?|posted|assigned|handed\\s+out)\\b");
+
+    private static final Pattern SEGMENT_SPLIT = Pattern.compile(";|(?<=[.!?])\\s+(?=[A-Z])");
+    private static final Pattern NUMBER = Pattern.compile("\\d+");
 
     private record DateMatch(int start, int end, LocalDate date) {}
 
@@ -58,14 +61,61 @@ public class RuleBasedExtractor implements Extractor {
     public List<CalendarEvent> extract(String text, LocalDate termStart) {
         Set<CalendarEvent> events = new LinkedHashSet<>();
         for (String line : text.split("\\R")) {
-            for (String segment : line.split(";")) {
+            for (String segment : SEGMENT_SPLIT.split(line)) {
                 CalendarEvent event = parseSegment(segment, termStart);
                 if (event != null) {
                     events.add(event);
                 }
             }
         }
-        return List.copyOf(events);
+        return mergeDuplicates(events);
+    }
+
+    private static List<CalendarEvent> mergeDuplicates(Set<CalendarEvent> events) {
+        List<CalendarEvent> merged = new ArrayList<>();
+        for (CalendarEvent event : events) {
+            boolean matched = false;
+            for (int i = 0; i < merged.size(); i++) {
+                if (sameEvent(merged.get(i), event)) {
+                    if (score(event) < score(merged.get(i))) {
+                        merged.set(i, event);
+                    }
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                merged.add(event);
+            }
+        }
+        return List.copyOf(merged);
+    }
+
+    private static boolean sameEvent(CalendarEvent a, CalendarEvent b) {
+        if (!a.date().equals(b.date()) || a.type() != b.type()) {
+            return false;
+        }
+        if (!firstWordStem(a.title()).equals(firstWordStem(b.title()))) {
+            return false;
+        }
+        String numberA = firstNumber(a.title());
+        String numberB = firstNumber(b.title());
+        return numberA.isEmpty() || numberB.isEmpty() || numberA.equals(numberB);
+    }
+
+    private static String firstWordStem(String title) {
+        String first = title.toLowerCase().split("\\s+")[0].replaceAll("[^a-z0-9]", "");
+        return first.endsWith("s") ? first.substring(0, first.length() - 1) : first;
+    }
+
+    private static String firstNumber(String title) {
+        Matcher matcher = NUMBER.matcher(title);
+        return matcher.find() ? matcher.group() : "";
+    }
+
+    private static int score(CalendarEvent event) {
+        boolean hasNumber = !firstNumber(event.title()).isEmpty();
+        return (hasNumber ? 0 : 1000) + event.title().length();
     }
 
     private CalendarEvent parseSegment(String segment, LocalDate termStart) {
@@ -184,16 +234,29 @@ public class RuleBasedExtractor implements Extractor {
         }
         String title = sb.toString()
                 .replaceAll("\\(\\s*\\)", " ")
+                .replaceAll("\\([\\d\\s]*[,\\-–][\\d,\\-–\\s]*\\)", " ")
                 .replaceAll("(?i)^\\s*week\\s*\\d+\\s*[-–—:|]*", " ")
                 .replaceAll("(?i)^\\s*\\d{1,2}\\s+(?=[a-z])", " ")
                 .replaceAll("\\s*[-–—:|,]\\s*(?:[-–—:|,]\\s*)+", " - ")
                 .replaceAll("\\s+", " ")
-                .replaceAll("^[\\s\\-–—:|,;•*]+|[\\s\\-–—:|,;•*]+$", "")
+                .replaceAll("^[\\s\\-–—:|,;•*.]+|[\\s\\-–—:|,;•*.]+$", "")
                 .replaceAll("(?i)\\s+(?:on|by|at|before|until|due)$", "");
+        title = trimDescription(title);
         if (title.length() > 100) {
             title = title.substring(0, 100).strip();
         }
         return title.isBlank() ? defaultTitle(type) : title;
+    }
+
+    private static String trimDescription(String title) {
+        int colon = title.indexOf(':');
+        if (colon > 0 && !Character.isDigit(title.charAt(colon - 1))) {
+            String after = title.substring(colon + 1).strip();
+            if (after.split("\\s+").length >= 6) {
+                return title.substring(0, colon).strip();
+            }
+        }
+        return title;
     }
 
     private static String defaultTitle(EventType type) {

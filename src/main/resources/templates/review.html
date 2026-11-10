@@ -16,15 +16,10 @@
 
     <form method="post" action="/export">
         <div class="card">
+            <div class="table-wrap">
             <table>
                 <thead>
-                <tr>
-                    <th>Use</th>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Title</th>
-                    <th></th>
-                </tr>
+                <tr><th>Use</th><th>Date</th><th>Type</th><th>Course</th><th>Title</th><th></th></tr>
                 </thead>
                 <tbody id="rows">
                 <tr th:each="row, i : ${form.rows}">
@@ -35,26 +30,23 @@
                     <td><input type="date" th:name="|rows[${i.index}].date|" th:value="${row.date}" required></td>
                     <td>
                         <select th:name="|rows[${i.index}].type|">
-                            <option th:each="t : ${types}" th:value="${t}" th:text="${t}"
-                                    th:selected="${t == row.type}"></option>
+                            <option th:each="t : ${types}" th:value="${t}" th:text="${t}" th:selected="${t == row.type}"></option>
                         </select>
                     </td>
-                    <td><input class="wide" type="text" th:name="|rows[${i.index}].title|"
-                               th:value="${row.title}" required></td>
-                    <td>
-                        <button type="button" class="icon-btn" onclick="removeRow(this)">✕</button>
-                    </td>
+                    <td><input class="course" type="text" th:name="|rows[${i.index}].course|" th:value="${row.course}"></td>
+                    <td><input class="wide" type="text" th:name="|rows[${i.index}].title|" th:value="${row.title}" required></td>
+                    <td><button type="button" class="icon-btn" onclick="removeRow(this)">✕</button></td>
                 </tr>
                 </tbody>
             </table>
-            <p>
-                <button type="button" class="btn-glass" id="addRow">+ New row</button>
-            </p>
+            </div>
+            <p><button type="button" class="btn-glass" id="addRow">+ New row</button></p>
         </div>
 
         <div class="actions">
             <button type="submit" class="btn-glass" formaction="/review/add-another" formnovalidate>Add</button>
             <button type="submit" class="btn-glass">Download calendar (.ics)</button>
+            <button type="submit" class="btn-glass" formaction="/review/done">View calendar</button>
         </div>
         <div class="actions">
             <button type="submit" class="link-btn" formaction="/review/clear" formnovalidate>Start over</button>
@@ -73,21 +65,16 @@
                     <option th:each="t : ${types}" th:value="${t}" th:text="${t}"></option>
                 </select>
             </td>
+            <td><input class="course" type="text" name="rows[@@IDX@@].course"></td>
             <td><input class="wide" type="text" name="rows[@@IDX@@].title" required></td>
-            <td>
-                <button type="button" class="icon-btn" onclick="removeRow(this)">✕</button>
-            </td>
+            <td><button type="button" class="icon-btn" onclick="removeRow(this)">✕</button></td>
         </tr>
     </template>
 </div>
 
 <script>
     let nextIndex = document.querySelectorAll('#rows tr').length;
-
-    function removeRow(btn) {
-        btn.closest('tr').remove();
-    }
-
+    function removeRow(btn) { btn.closest('tr').remove(); }
     document.getElementById('addRow').addEventListener('click', () => {
         const html = document.getElementById('rowTemplate').innerHTML.replaceAll('@@IDX@@', nextIndex++);
         document.getElementById('rows').insertAdjacentHTML('beforeend', html);

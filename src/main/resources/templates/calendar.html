@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendar</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="cal-page">
+<div class="cal-shell">
+
+  <div class="cal-head">
+    <h1 th:text="${monthLabel}"></h1>
+    <a class="btn-glass export" th:href="@{/calendar/export.ics}">Export calendar</a>
+  </div>
+
+  <div class="cal-toolbar">
+    <div class="tb-left">
+      <form method="post" action="/review" enctype="multipart/form-data" class="quick-add">
+        <label class="btn-glass plus" title="Add another syllabus">+
+          <input type="file" name="file" accept=".pdf" hidden onchange="this.form.submit()">
+        </label>
+      </form>
+    </div>
+    <div class="tb-center">
+      <a class="btn-glass small" th:href="@{/calendar(month=${prev})}">&larr;</a>
+      <a class="btn-glass small" th:href="@{/calendar}">Today</a>
+      <a class="btn-glass small" th:href="@{/calendar(month=${next})}">&rarr;</a>
+    </div>
+    <div class="tb-right">
+      <a class="link-btn" href="/review">Edit events</a>
+    </div>
+  </div>
+
+  <div class="card cal">
+    <div class="dow">
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div class="weeks">
+      <div class="week" th:each="week : ${weeks}">
+        <div class="day" th:each="d : ${week}"
+             th:classappend="${(d.inMonth() ? '' : 'other ') + (d.today() ? 'today' : '')}">
+          <span class="num" th:text="${d.date().dayOfMonth}"></span>
+          <div class="holiday" th:if="${d.holiday() != null}" th:text="${d.holiday()}"></div>
+          <div class="ev" th:each="e : ${d.events()}"
+               th:style="${'--h:' + e.hue()}"
+               th:title="${e.fullTitle()}">
+            <div class="ev-code" th:text="${e.course}"></div>
+            <div class="ev-name" th:text="${e.title}"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="addDialog" class="dlg">
+    <form method="post" action="/review" enctype="multipart/form-data">
+      <h2>Add a syllabus</h2>
+      <p><input type="file" name="file" accept=".pdf" required></p>
+      <p><label>Term start date (optional): <input type="date" name="termStart"></label></p>

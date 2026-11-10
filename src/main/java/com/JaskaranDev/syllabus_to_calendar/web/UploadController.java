@@ -5,12 +5,14 @@ import com.JaskaranDev.syllabus_to_calendar.extract.RuleBasedExtractor;
 import com.JaskaranDev.syllabus_to_calendar.extract.TermDetector;
 import com.JaskaranDev.syllabus_to_calendar.model.CalendarEvent;
 import com.JaskaranDev.syllabus_to_calendar.model.EventType;
+import com.JaskaranDev.syllabus_to_calendar.extract.CourseDetector;
 
 
 import jakarta.servlet.http.HttpSession;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.jspecify.annotations.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,10 +36,11 @@ import java.util.List;
 @Controller
 public class UploadController {
 
-    private static final String ROWS = "rows";
+    static final String ROWS = "rows";
     private static final String SOURCES = "sources";
 
     private final Extractor extractor = new RuleBasedExtractor();
+    private final CourseDetector courseDetector = new CourseDetector();
 
     @GetMapping("/")
     public String home(HttpSession session, Model model) {
@@ -70,16 +73,23 @@ public class UploadController {
             termLabel = detected.get().description();
         }
 
+        String course = courseDetector.detect(text)
+                .map(code -> code.replace(" ", ""))
+                .orElseGet(() -> stem(file.getOriginalFilename()));
+
         List<RowForm> rows = rows(session);
         for (CalendarEvent event : extractor.extract(text, termStart)) {
-            if (!alreadyHas(rows, event)) {
-                rows.add(RowForm.from(event));
+            RowForm row = RowForm.from(event, course);
+            if (!alreadyHas(rows, row)) {
+                rows.add(row);
             }
         }
         sortRows(rows);
+
         sources(session).add(file.getOriginalFilename() + " (" + termLabel + ")");
         return "redirect:/review";
     }
+
 
     @GetMapping("/review")
     public String review(HttpSession session, Model model) {
@@ -114,7 +124,7 @@ public class UploadController {
                                          HttpSession session) {
         List<CalendarEvent> events = saveEdits(form, session).stream()
                 .filter(RowForm::isKeep)
-                .map(r -> new CalendarEvent(r.getTitle(), r.getDate(), r.getType()))
+                .map(r -> new CalendarEvent(r.fullTitle(), r.getDate(), r.getType()))
                 .toList();
         byte[] body = IcsWriter.write(events).getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
@@ -123,10 +133,22 @@ public class UploadController {
                 .body(body);
     }
 
+    @PostMapping("/review/done")
+    public String done(@ModelAttribute ReviewForm form, BindingResult errors, HttpSession session) {
+        saveEdits(form, session);
+        return "redirect:/calendar";
+    }
+
     private String uploadError(String message, HttpSession session, Model model) {
         model.addAttribute("error", message);
         model.addAttribute("count", rows(session).size());
         return "upload";
+    }
+
+    private static String stem(String filename) {
+        if (filename == null || filename.isBlank()) return "";
+        int dot = filename.lastIndexOf('.');
+        return (dot > 0 ? filename.substring(0, dot) : filename).replaceAll("\\s+", "");
     }
 
     // Removes rows the user deleted or left incomplete, sorts, and stores the result
@@ -136,6 +158,7 @@ public class UploadController {
             if (row != null && row.getDate() != null && row.getType() != null
                     && row.getTitle() != null && !row.getTitle().isBlank()) {
                 row.setTitle(row.getTitle().strip());
+                row.setCourse(row.getCourse() == null ? "" : row.getCourse().strip().toUpperCase());
                 cleaned.add(row);
             }
         }
@@ -148,10 +171,11 @@ public class UploadController {
         rows.sort(Comparator.comparing(RowForm::getDate).thenComparing(RowForm::getTitle));
     }
 
-    private static boolean alreadyHas(List<RowForm> rows, CalendarEvent event) {
-        return rows.stream().anyMatch(r -> r.getDate().equals(event.date())
-                && r.getType() == event.type()
-                && r.getTitle().equalsIgnoreCase(event.title()));
+    private static boolean alreadyHas(List<RowForm> rows, RowForm candidate) {
+        return rows.stream().anyMatch(r -> r.getDate().equals(candidate.getDate())
+                && r.getType() == candidate.getType()
+                && r.getTitle().equalsIgnoreCase(candidate.getTitle())
+                && java.util.Objects.equals(r.getCourse(), candidate.getCourse()));
     }
 
     @SuppressWarnings("unchecked")

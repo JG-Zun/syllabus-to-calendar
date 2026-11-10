@@ -9,6 +9,10 @@
     <h1>Syllabus to Calendar</h1>
     <p class="sub">Upload a syllabus and get every deadline on your calendar.</p>
     <div class="card error" th:if="${error}" th:text="${error}"></div>
+    <div class="card" th:if="${count > 0}">
+        <p>You have <strong th:text="${count}"></strong> events so far.</p>
+        <a class="btn-glass" href="/review">Back to review</a>
+    </div>
     <form class="card" method="post" action="/review" enctype="multipart/form-data">
         <p><label>Syllabus PDF: <input type="file" name="file" accept=".pdf" required></label></p>
         <p><label>Term start date (optional): <input type="date" name="termStart"></label></p>

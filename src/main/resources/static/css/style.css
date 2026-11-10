@@ -85,3 +85,26 @@ th, td { padding: 10px 8px; border-bottom: 1px solid var(--glass-border); }
     color: #ffb3b3;
 }
 .hint { color: var(--muted); font-size: 0.9rem; }
+
+.actions { gap: 12px; flex-wrap: wrap; }
+.actions .btn-glass { font: inherit; font-weight: 600; cursor: pointer; }
+
+input.wide { width: 100%; min-width: 200px; }
+input[type="checkbox"] { width: auto; padding: 0; accent-color: var(--accent); }
+option { background: #1a1a1f; color: var(--text); }
+
+.icon-btn {
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    border: 1px solid var(--glass-border);
+}
+.icon-btn:hover { color: #ff9b9b; border-color: rgba(255, 110, 110, 0.5); filter: none; }
+
+.link-btn {
+    background: none;
+    color: var(--muted);
+    font-weight: 400;
+    text-decoration: underline;
+    padding: 4px;
+}

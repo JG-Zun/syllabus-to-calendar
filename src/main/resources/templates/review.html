@@ -10,25 +10,88 @@
 <body>
 <div class="container">
     <h1>Review extracted events</h1>
-    <p class="sub">Term: <span th:text="${termLabel}"></span></p>
-    <div class="card">
-        <table>
-            <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Title</th>
-            </tr>
-            <tr th:each="e : ${events}">
-                <td th:text="${e.date()}"></td>
-                <td th:text="${e.type()}"></td>
-                <td th:text="${e.title()}"></td>
-            </tr>
-        </table>
-        <p th:if="${#lists.isEmpty(events)}">No events found.</p>
-    </div>
-    <div class="actions">
-        <a class="btn-glass" href="/">Add</a>
-    </div>
+    <p class="sub">
+        Sources: <span th:each="s, st : ${sources}" th:text="${s} + (${st.last} ? '' : ', ')"></span>
+    </p>
+
+    <form method="post" action="/export">
+        <div class="card">
+            <table>
+                <thead>
+                <tr>
+                    <th>Use</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody id="rows">
+                <tr th:each="row, i : ${form.rows}">
+                    <td>
+                        <input type="checkbox" th:name="|rows[${i.index}].keep|" th:checked="${row.keep}">
+                        <input type="hidden" th:name="|_rows[${i.index}].keep|" value="on">
+                    </td>
+                    <td><input type="date" th:name="|rows[${i.index}].date|" th:value="${row.date}" required></td>
+                    <td>
+                        <select th:name="|rows[${i.index}].type|">
+                            <option th:each="t : ${types}" th:value="${t}" th:text="${t}"
+                                    th:selected="${t == row.type}"></option>
+                        </select>
+                    </td>
+                    <td><input class="wide" type="text" th:name="|rows[${i.index}].title|"
+                               th:value="${row.title}" required></td>
+                    <td>
+                        <button type="button" class="icon-btn" onclick="removeRow(this)">✕</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <p>
+                <button type="button" class="btn-glass" id="addRow">+ New row</button>
+            </p>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn-glass" formaction="/review/add-another" formnovalidate>Add</button>
+            <button type="submit" class="btn-glass">Download calendar (.ics)</button>
+        </div>
+        <div class="actions">
+            <button type="submit" class="link-btn" formaction="/review/clear" formnovalidate>Start over</button>
+        </div>
+    </form>
+
+    <template id="rowTemplate">
+        <tr>
+            <td>
+                <input type="checkbox" name="rows[@@IDX@@].keep" checked>
+                <input type="hidden" name="_rows[@@IDX@@].keep" value="on">
+            </td>
+            <td><input type="date" name="rows[@@IDX@@].date" required></td>
+            <td>
+                <select name="rows[@@IDX@@].type">
+                    <option th:each="t : ${types}" th:value="${t}" th:text="${t}"></option>
+                </select>
+            </td>
+            <td><input class="wide" type="text" name="rows[@@IDX@@].title" required></td>
+            <td>
+                <button type="button" class="icon-btn" onclick="removeRow(this)">✕</button>
+            </td>
+        </tr>
+    </template>
 </div>
+
+<script>
+    let nextIndex = document.querySelectorAll('#rows tr').length;
+
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+    }
+
+    document.getElementById('addRow').addEventListener('click', () => {
+        const html = document.getElementById('rowTemplate').innerHTML.replaceAll('@@IDX@@', nextIndex++);
+        document.getElementById('rows').insertAdjacentHTML('beforeend', html);
+    });
+</script>
 </body>
 </html>

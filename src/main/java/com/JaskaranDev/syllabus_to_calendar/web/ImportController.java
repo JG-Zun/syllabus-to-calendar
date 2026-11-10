@@ -75,7 +75,8 @@ public class ImportController {
             return "redirect:/";
         }
 
-        Result result = merge(session, entries);
+        String feedCourse = detectCourse(IcsReader.calendarName(ics));
+        Result result = merge(session, entries, feedCourse);
         if (fromUrl) {
             session.setAttribute(FEED_URL, feedUrl.strip());
             session.setAttribute(LAST_SYNC, Instant.now());
@@ -103,11 +104,12 @@ public class ImportController {
         String url = (String) session.getAttribute(FEED_URL);
         if (url == null) return "No Brightspace link saved.";
         try {
-            List<IcsReader.Entry> entries = IcsReader.read(fetch(url), ZONE);
+            String ics = fetch(url);
+            List<IcsReader.Entry> entries = IcsReader.read(ics, ZONE);
             if (entries.isEmpty()) {
                 return "Brightspace returned no events, so nothing was changed.";
             }
-            Result r = merge(session, entries);
+            Result r = merge(session, entries, detectCourse(IcsReader.calendarName(ics)));
             session.setAttribute(LAST_SYNC, Instant.now());
             if (r.added() + r.updated() + r.removed() == 0) return "Already up to date.";
             return "Synced: " + r.added() + " new, " + r.updated() + " updated, " + r.removed() + " removed.";
@@ -116,7 +118,7 @@ public class ImportController {
         }
     }
 
-    private static Result merge(HttpSession session, List<IcsReader.Entry> entries) {
+    private static Result merge(HttpSession session, List<IcsReader.Entry> entries, String feedCourse) {
         List<RowForm> rows = UploadController.rows(session);
         Set<String> known = known(session);
         Set<String> seen = new HashSet<>();
@@ -132,6 +134,10 @@ public class ImportController {
             RowForm existing = rows.stream()
                     .filter(r -> entry.uid().equals(r.getFeedUid()))
                     .findFirst().orElse(null);
+                String course = detectCourse(entry.summary() + "\n" + entry.description() + "\n"
+                    + entry.location() + "\n" + notes(entry));
+                if (course.isBlank()) course = feedCourse;
+                String notes = notes(entry);
 
             if (existing != null) {
                 boolean untouched = existing.getTitle().equals(existing.getFeedTitle())
@@ -145,12 +151,18 @@ public class ImportController {
                 }
                 existing.setFeedTitle(title);
                 existing.setFeedDate(date);
+                if ((existing.getCourse() == null || existing.getCourse().isBlank()) && !course.isBlank()) {
+                    existing.setCourse(course);
+                }
+                existing.setDescription(entry.description());
+                existing.setUrl(entry.url());
+                existing.setNotes(notes);
             } else if (!known.contains(entry.uid())) {
                 // never seen before; if we've seen it and it's gone from the rows, the user deleted it
-                String course = COURSES.detect(entry.summary() + "\n" + entry.description())
-                        .map(code -> code.replace(" ", ""))
-                        .orElse("");
                 RowForm row = RowForm.from(new CalendarEvent(title, entry.date(), classify(title)), course);
+                row.setDescription(entry.description());
+                row.setUrl(entry.url());
+                row.setNotes(notes);
                 if (!UploadController.alreadyHas(rows, row)) {
                     row.setFeedUid(entry.uid());
                     row.setFeedTitle(title);
@@ -168,6 +180,23 @@ public class ImportController {
 
         UploadController.sortRows(rows);
         return new Result(added, updated, removed);
+    }
+
+    private static String detectCourse(String text) {
+        return COURSES.detect(text).map(code -> code.replace(" ", "")).orElse("");
+    }
+
+    private static String notes(IcsReader.Entry entry) {
+        String otherProperties = entry.properties().entrySet().stream()
+            .filter(property -> !Set.of("UID", "SUMMARY", "DESCRIPTION", "DTSTART", "DTEND",
+                    "DTSTAMP", "URL", "LOCATION", "STATUS", "CLASS", "TRANSP", "SEQUENCE",
+                        "CREATED", "LAST-MODIFIED", "RECURRENCE-ID").contains(property.getKey()))
+            .flatMap(property -> property.getValue().stream()
+                        .map(value -> property.getKey() + ": " + value))
+            .collect(java.util.stream.Collectors.joining("\n"));
+        if (entry.location().isBlank()) return otherProperties;
+        return otherProperties.isBlank() ? "Location: " + entry.location()
+                : "Location: " + entry.location() + "\n" + otherProperties;
     }
 
     @SuppressWarnings("unchecked")

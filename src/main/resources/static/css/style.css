@@ -194,7 +194,7 @@ body.cal-page { height: 100vh; overflow: hidden; }
     align-items: center;
     margin: 14px 0 10px;
 }
-.tb-left { justify-self: start; }
+.tb-left { justify-self: start; display: flex; align-items: center; gap: 10px; }
 .tb-right { justify-self: end; }
 .tb-center { display: flex; gap: 10px; }
 
@@ -254,11 +254,65 @@ body.cal-page { height: 100vh; overflow: hidden; }
 }
 .ev-code { font-weight: 700; font-size: 0.8rem; color: hsl(var(--h) 75% 72%); }
 .ev-name { font-size: 0.72rem; color: var(--muted); }
+.ev-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+    font-weight: 400;
+    line-height: 1.3;
+}
+.ev-open:hover { filter: none; text-decoration: underline; }
+.ev-open .ev-name { color: inherit; }
+
+dialog.event-dialog {
+    position: fixed;
+    width: min(560px, calc(100vw - 28px));
+    max-width: none;
+    max-height: calc(100vh - 28px);
+    overflow: auto;
+    padding: 0;
+    background: rgba(25, 27, 38, 0.84);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), inset 0 1px rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(28px) saturate(145%);
+    backdrop-filter: blur(28px) saturate(145%);
+}
+dialog.event-dialog::backdrop { background: rgba(5, 6, 12, 0.48); }
+.event-dialog-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--glass-border);
+    cursor: grab;
+    touch-action: none;
+}
+.event-dialog-head:active { cursor: grabbing; }
+.event-dialog-head h2 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.event-dialog-head .icon-btn { flex: 0 0 auto; }
+.event-detail-list { display: flex; gap: 20px; flex-wrap: wrap; margin: 0; padding: 14px 22px; }
+.event-detail-list div { min-width: 90px; }
+.event-detail-list dt { color: var(--muted); font-size: 0.78rem; }
+.event-detail-list dd { margin: 2px 0 0; }
+.event-detail-section { padding: 14px 22px; border-top: 1px solid var(--glass-border); }
+.event-detail-section h3 { margin: 0 0 8px; font-size: 0.92rem; color: #d7d9ff; }
+.event-detail-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.event-dialog-links { display: flex; flex-direction: column; gap: 8px; }
+.event-dialog-links a { color: #b7c1ff; overflow-wrap: anywhere; }
+.ev-data[hidden], .event-detail-section[hidden] { display: none; }
 
 @media (max-width: 700px) {
     .cal .day { padding: 3px; }
-    .ev-code { font-size: 0.65rem; }
     .ev-name { font-size: 0.58rem; }
+    .event-dialog-head { padding: 16px; }
+    .event-detail-list, .event-detail-section { padding-left: 16px; padding-right: 16px; }
 }
 
 .tb-right { display: flex; align-items: center; gap: 12px; }

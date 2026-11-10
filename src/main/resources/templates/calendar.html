@@ -16,6 +16,7 @@
 
   <div class="cal-toolbar">
     <div class="tb-left">
+      <a class="btn-glass small" href="/review">Edit events</a>
       <form method="post" action="/review" enctype="multipart/form-data" class="quick-add">
         <label class="btn-glass plus" title="Add another syllabus">+
           <input type="file" name="file" accept=".pdf" hidden onchange="this.form.submit()">
@@ -32,7 +33,6 @@
         <span class="hint" th:if="${syncedAgo}" th:text="'Synced ' + ${syncedAgo}"></span>
         <button type="submit" class="btn-glass small">Sync</button>
       </form>
-      <a class="link-btn" href="/review">Edit events</a>
     </div>
     <p class="hint" th:if="${syncMessage}" th:text="${syncMessage}" style="text-align:center;margin:0 0 8px"></p>
   </div>
@@ -47,19 +47,123 @@
              th:classappend="${(d.inMonth() ? '' : 'other ') + (d.today() ? 'today' : '')}">
           <span class="num" th:text="${d.date().dayOfMonth}"></span>
           <div class="holiday" th:if="${d.holiday() != null}" th:text="${d.holiday()}"></div>
-          <div class="ev" th:each="e : ${d.events()}"
-               th:style="${'--h:' + e.hue()}"
-               th:title="${e.fullTitle()}">
-            <div class="ev-code" th:text="${e.course}"></div>
-            <div class="ev-name" th:text="${e.title}"></div>
+          <div class="ev" th:each="e : ${d.events()}" th:style="${'--h:' + e.hue()}">
+            <button type="button" class="ev-open" aria-haspopup="dialog">
+              <span class="ev-name" th:text="${e.title}"></span>
+            </button>
+            <div class="ev-data" hidden>
+              <span class="event-course" th:text="${e.course}"></span>
+              <span class="event-date" th:text="${e.date}"></span>
+              <span class="event-type" th:text="${e.type}"></span>
+              <div class="event-description" th:text="${e.description}"></div>
+              <div class="event-notes" th:text="${e.notes}"></div>
+              <div class="event-links">
+                <a th:each="link : ${e.links}" th:href="${link}" target="_blank" rel="noopener noreferrer">Open event link</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
+  <dialog id="eventDialog" class="dlg event-dialog" aria-labelledby="eventDialogTitle">
+    <div class="event-dialog-head" id="eventDialogDragHandle">
+      <h2 id="eventDialogTitle"></h2>
+      <button type="button" class="icon-btn" id="eventDialogClose" aria-label="Close event details">✕</button>
+    </div>
+    <dl class="event-detail-list">
+      <div><dt>Course</dt><dd id="eventDialogCourse"></dd></div>
+      <div><dt>Due</dt><dd id="eventDialogDate"></dd></div>
+      <div><dt>Type</dt><dd id="eventDialogType"></dd></div>
+    </dl>
+    <section class="event-detail-section" id="eventDescriptionSection">
+      <h3>Description</h3>
+      <p class="event-detail-text" id="eventDialogDescription"></p>
+    </section>
+    <section class="event-detail-section" id="eventNotesSection">
+      <h3>Other notes</h3>
+      <p class="event-detail-text" id="eventDialogNotes"></p>
+    </section>
+    <section class="event-detail-section" id="eventLinksSection">
+      <h3>Links</h3>
+      <div id="eventDialogLinks" class="event-dialog-links"></div>
+    </section>
+  </dialog>
+
   <dialog id="addDialog" class="dlg">
     <form method="post" action="/review" enctype="multipart/form-data">
       <h2>Add a syllabus</h2>
       <p><input type="file" name="file" accept=".pdf" required></p>
       <p><label>Term start date (optional): <input type="date" name="termStart"></label></p>
+      <div class="actions">
+        <button type="submit">Extract deadlines</button>
+        <button type="button" class="btn-glass" onclick="this.closest('dialog').close()">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+
+<script>
+  const eventDialog = document.getElementById('eventDialog');
+  const setDetail = (id, value) => { document.getElementById(id).textContent = value; };
+
+  document.querySelectorAll('.ev-open').forEach(button => {
+    button.addEventListener('click', () => {
+      const data = button.parentElement.querySelector('.ev-data');
+      const value = selector => data.querySelector(selector).textContent.trim();
+      setDetail('eventDialogTitle', button.querySelector('.ev-name').textContent.trim());
+      setDetail('eventDialogCourse', value('.event-course') || 'Not identified');
+      setDetail('eventDialogDate', value('.event-date'));
+      setDetail('eventDialogType', value('.event-type'));
+
+      const description = value('.event-description');
+      const notes = value('.event-notes');
+      setDetail('eventDialogDescription', description);
+      setDetail('eventDialogNotes', notes);
+      document.getElementById('eventDescriptionSection').hidden = !description;
+      document.getElementById('eventNotesSection').hidden = !notes;
+
+      const links = Array.from(data.querySelectorAll('.event-links a'), link => link.cloneNode(true));
+      document.getElementById('eventDialogLinks').replaceChildren(...links);
+      document.getElementById('eventLinksSection').hidden = links.length === 0;
+      if (!eventDialog.open) eventDialog.showModal();
+    });
+  });
+
+  document.getElementById('eventDialogClose').addEventListener('click', () => eventDialog.close());
+  eventDialog.addEventListener('click', event => {
+    if (event.target === eventDialog) eventDialog.close();
+  });
+
+  const dragHandle = document.getElementById('eventDialogDragHandle');
+  dragHandle.addEventListener('pointerdown', event => {
+    if (event.target.closest('button') || event.button !== 0) return;
+    const rect = eventDialog.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+    dragHandle.setPointerCapture(event.pointerId);
+    eventDialog.style.transform = 'none';
+    eventDialog.style.margin = '0';
+    eventDialog.style.left = rect.left + 'px';
+    eventDialog.style.top = rect.top + 'px';
+
+    const move = moveEvent => {
+      if (!dragHandle.hasPointerCapture(moveEvent.pointerId)) return;
+      const maxLeft = Math.max(0, window.innerWidth - eventDialog.offsetWidth);
+      const maxTop = Math.max(0, window.innerHeight - eventDialog.offsetHeight);
+      eventDialog.style.left = Math.min(maxLeft, Math.max(0, moveEvent.clientX - offsetX)) + 'px';
+      eventDialog.style.top = Math.min(maxTop, Math.max(0, moveEvent.clientY - offsetY)) + 'px';
+    };
+    const stop = () => {
+      dragHandle.removeEventListener('pointermove', move);
+      dragHandle.removeEventListener('pointerup', stop);
+      dragHandle.removeEventListener('pointercancel', stop);
+    };
+    dragHandle.addEventListener('pointermove', move);
+    dragHandle.addEventListener('pointerup', stop, { once: true });
+    dragHandle.addEventListener('pointercancel', stop, { once: true });
+  });
+</script>
+</body>
+</html>

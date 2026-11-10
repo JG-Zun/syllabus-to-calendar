@@ -5,9 +5,17 @@ import com.JaskaranDev.syllabus_to_calendar.model.EventType;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RowForm implements Serializable {
+
+    private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s<>\\\"]+", Pattern.CASE_INSENSITIVE);
 
     private String title;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -18,6 +26,9 @@ public class RowForm implements Serializable {
     private String feedUid = "";
     private String feedTitle = "";
     private String feedDate = "";
+    private String description = "";
+    private String url = "";
+    private String notes = "";
 
     public String getFeedUid() { return feedUid; }
     public void setFeedUid(String feedUid) { this.feedUid = feedUid; }
@@ -25,6 +36,12 @@ public class RowForm implements Serializable {
     public void setFeedTitle(String feedTitle) { this.feedTitle = feedTitle; }
     public String getFeedDate() { return feedDate; }
     public void setFeedDate(String feedDate) { this.feedDate = feedDate; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description == null ? "" : description; }
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url == null ? "" : url; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes == null ? "" : notes; }
 
     public RowForm() {}
 
@@ -43,7 +60,36 @@ public class RowForm implements Serializable {
     }
 
     public String fullTitle() {
-        return (course == null || course.isBlank()) ? title : course + ": " + title;
+        return title;
+    }
+
+    public List<String> getLinks() {
+        Set<String> links = new LinkedHashSet<>();
+        addSafeLink(links, url);
+        addLinksFrom(links, description);
+        addLinksFrom(links, notes);
+        return List.copyOf(links);
+    }
+
+    private static void addLinksFrom(Set<String> links, String text) {
+        Matcher matcher = URL_PATTERN.matcher(text == null ? "" : text);
+        while (matcher.find()) {
+            String candidate = matcher.group().replaceAll("[),.;]+$", "");
+            addSafeLink(links, candidate);
+        }
+    }
+
+    private static void addSafeLink(Set<String> links, String value) {
+        if (value == null || value.isBlank()) return;
+        try {
+            URI uri = URI.create(value.strip());
+            if (uri.getHost() != null && ("https".equalsIgnoreCase(uri.getScheme())
+                    || "http".equalsIgnoreCase(uri.getScheme()))) {
+                links.add(uri.toASCIIString());
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Ignore malformed or non-web links in untrusted calendar metadata.
+        }
     }
 
     public int hue() {

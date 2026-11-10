@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpSession;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.jspecify.annotations.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,6 +31,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class UploadController {
@@ -153,12 +153,25 @@ public class UploadController {
 
     // Removes rows the user deleted or left incomplete, sorts, and stores the result
     private List<RowForm> saveEdits(ReviewForm form, HttpSession session) {
+        Map<String, RowForm> importedRows = new java.util.HashMap<>();
+        for (RowForm existing : rows(session)) {
+            if (existing.getFeedUid() != null && !existing.getFeedUid().isBlank()) {
+                importedRows.putIfAbsent(existing.getFeedUid(), existing);
+            }
+        }
+
         List<RowForm> cleaned = new ArrayList<>();
         for (RowForm row : form.getRows()) {
             if (row != null && row.getDate() != null && row.getType() != null
                     && row.getTitle() != null && !row.getTitle().isBlank()) {
                 row.setTitle(row.getTitle().strip());
                 row.setCourse(row.getCourse() == null ? "" : row.getCourse().strip().toUpperCase());
+                RowForm original = importedRows.get(row.getFeedUid());
+                if (original != null) {
+                    row.setDescription(original.getDescription());
+                    row.setUrl(original.getUrl());
+                    row.setNotes(original.getNotes());
+                }
                 cleaned.add(row);
             }
         }

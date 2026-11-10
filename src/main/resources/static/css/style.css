@@ -1,0 +1,87 @@
+:root {
+    --bg: #0c0c0e;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --text: #f2f2f5;
+    --muted: #a0a0ab;
+    --accent: #7c8cff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+            radial-gradient(600px circle at 15% 10%, rgba(124, 140, 255, 0.25), transparent 60%),
+            radial-gradient(500px circle at 85% 80%, rgba(255, 110, 180, 0.18), transparent 60%),
+            var(--bg);
+    background-attachment: fixed;
+}
+
+.container { max-width: 900px; margin: 0 auto; padding: 48px 20px; }
+
+.card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+h1 { margin: 0 0 8px; font-size: 2rem; }
+p.sub { color: var(--muted); margin-top: 0; }
+
+input, select {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font: inherit;
+    color-scheme: dark;
+}
+
+button, .btn {
+    background: var(--accent);
+    color: #0c0c0e;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+}
+button:hover, .btn:hover { filter: brightness(1.1); }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; color: var(--muted); font-weight: 500; }
+th, td { padding: 10px 8px; border-bottom: 1px solid var(--glass-border); }
+
+.actions { display: flex; justify-content: center; margin-top: 24px; }
+
+.btn-glass {
+    display: inline-block;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-radius: 12px;
+    padding: 10px 32px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    transition: background 0.2s, transform 0.2s;
+}
+.btn-glass:hover { background: rgba(255, 255, 255, 0.13); transform: translateY(-1px); }
+
+.error {
+    border-color: rgba(255, 110, 110, 0.5);
+    color: #ffb3b3;
+}
+.hint { color: var(--muted); font-size: 0.9rem; }

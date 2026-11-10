@@ -19,6 +19,8 @@ import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.Duration;
+import java.time.Instant;
 
 @Controller
 public class CalendarController {
@@ -28,6 +30,7 @@ public class CalendarController {
     @GetMapping("/calendar")
     public String calendar(@RequestParam(value = "month", required = false) String month,
                            HttpSession session, Model model) {
+        ImportController.syncIfStale(session);
         List<RowForm> rows = keptRows(session);
         if (rows.isEmpty()) {
             return "redirect:/";
@@ -66,6 +69,12 @@ public class CalendarController {
         model.addAttribute("monthLabel", ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + ym.getYear());
         model.addAttribute("prev", ym.minusMonths(1).toString());
         model.addAttribute("next", ym.plusMonths(1).toString());
+        model.addAttribute("hasFeed", session.getAttribute(ImportController.FEED_URL) != null);
+        Instant last = (Instant) session.getAttribute(ImportController.LAST_SYNC);
+        if (last != null) {
+            long mins = Duration.between(last, Instant.now()).toMinutes();
+            model.addAttribute("syncedAgo", mins < 1 ? "just now" : mins + " min ago");
+        }
         return "calendar";
     }
 

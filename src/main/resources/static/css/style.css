@@ -260,3 +260,6 @@ body.cal-page { height: 100vh; overflow: hidden; }
     .ev-code { font-size: 0.65rem; }
     .ev-name { font-size: 0.58rem; }
 }
+
+.tb-right { display: flex; align-items: center; gap: 12px; }
+.sync-form { display: flex; align-items: center; gap: 10px; }

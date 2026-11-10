@@ -167,11 +167,11 @@ public class UploadController {
         return cleaned;
     }
 
-    private static void sortRows(List<RowForm> rows) {
+    static void sortRows(List<RowForm> rows) {
         rows.sort(Comparator.comparing(RowForm::getDate).thenComparing(RowForm::getTitle));
     }
 
-    private static boolean alreadyHas(List<RowForm> rows, RowForm candidate) {
+    static boolean alreadyHas(List<RowForm> rows, RowForm candidate) {
         return rows.stream().anyMatch(r -> r.getDate().equals(candidate.getDate())
                 && r.getType() == candidate.getType()
                 && r.getTitle().equalsIgnoreCase(candidate.getTitle())
@@ -179,7 +179,7 @@ public class UploadController {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<RowForm> rows(HttpSession session) {
+    static List<RowForm> rows(HttpSession session) {
         List<RowForm> rows = (List<RowForm>) session.getAttribute(ROWS);
         if (rows == null) {
             rows = new ArrayList<>();
@@ -189,7 +189,7 @@ public class UploadController {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<String> sources(HttpSession session) {
+    static List<String> sources(HttpSession session) {
         List<String> sources = (List<String>) session.getAttribute(SOURCES);
         if (sources == null) {
             sources = new ArrayList<>();

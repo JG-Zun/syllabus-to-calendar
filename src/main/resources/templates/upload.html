@@ -19,5 +19,12 @@
         <p class="hint">Leave the date blank and we'll detect the term from the syllabus.</p>
         <button type="submit">Extract deadlines</button>
     </form>
+    <form class="card" method="post" action="/import" enctype="multipart/form-data">
+        <h2>Import from Brightspace</h2>
+        <p class="hint">Paste your Brightspace calendar subscription link, or upload an .ics file. We use the link once to read your deadlines and never save it.</p>
+        <p><input type="text" name="feedUrl" placeholder="webcal://... or https://..." style="width:100%"></p>
+        <p><input type="file" name="file" accept=".ics"></p>
+        <button type="submit">Import deadlines</button>
+    </form>
 </div>
 </body>

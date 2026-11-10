@@ -15,6 +15,17 @@ public class RowForm implements Serializable {
     private EventType type;
     private boolean keep = true;
 
+    private String feedUid = "";
+    private String feedTitle = "";
+    private String feedDate = "";
+
+    public String getFeedUid() { return feedUid; }
+    public void setFeedUid(String feedUid) { this.feedUid = feedUid; }
+    public String getFeedTitle() { return feedTitle; }
+    public void setFeedTitle(String feedTitle) { this.feedTitle = feedTitle; }
+    public String getFeedDate() { return feedDate; }
+    public void setFeedDate(String feedDate) { this.feedDate = feedDate; }
+
     public RowForm() {}
 
     private String course = "";

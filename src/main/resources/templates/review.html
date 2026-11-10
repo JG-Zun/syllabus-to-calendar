@@ -67,7 +67,12 @@
             </td>
             <td><input class="course" type="text" name="rows[@@IDX@@].course"></td>
             <td><input class="wide" type="text" name="rows[@@IDX@@].title" required></td>
-            <td><button type="button" class="icon-btn" onclick="removeRow(this)">✕</button></td>
+            <td>
+                <button type="button" class="icon-btn" onclick="removeRow(this)">✕</button>
+                <input type="hidden" th:name="|rows[${i.index}].feedUid|" th:value="${row.feedUid}">
+                <input type="hidden" th:name="|rows[${i.index}].feedTitle|" th:value="${row.feedTitle}">
+                <input type="hidden" th:name="|rows[${i.index}].feedDate|" th:value="${row.feedDate}">
+            </td>
         </tr>
     </template>
 </div>

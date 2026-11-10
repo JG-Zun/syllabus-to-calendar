@@ -28,8 +28,13 @@
       <a class="btn-glass small" th:href="@{/calendar(month=${next})}">&rarr;</a>
     </div>
     <div class="tb-right">
+      <form th:if="${hasFeed}" method="post" action="/sync" class="quick-add sync-form">
+        <span class="hint" th:if="${syncedAgo}" th:text="'Synced ' + ${syncedAgo}"></span>
+        <button type="submit" class="btn-glass small">Sync</button>
+      </form>
       <a class="link-btn" href="/review">Edit events</a>
     </div>
+    <p class="hint" th:if="${syncMessage}" th:text="${syncMessage}" style="text-align:center;margin:0 0 8px"></p>
   </div>
 
   <div class="card cal">
